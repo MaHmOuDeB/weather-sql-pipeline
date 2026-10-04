@@ -23,7 +23,9 @@ def row(loc="Berlin", epoch=1716000000, cond="Sunny", temp=20.0, hum=50, **kw):
 def make(tmp_path, rows):
     p = tmp_path / "weather.csv"
     with open(p, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=COLS); w.writeheader(); w.writerows(rows)
+        writer = csv.DictWriter(f, fieldnames=COLS)
+        writer.writeheader()
+        writer.writerows(rows)
     return p
 
 
