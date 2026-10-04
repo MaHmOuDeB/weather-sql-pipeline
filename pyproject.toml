@@ -1,0 +1,19 @@
+[project]
+name = "weather-sql-pipeline"
+version = "1.0.0"
+description = "SQL star schema, automated data-quality checks and a fair model benchmark on the Global Weather Repository (DuckDB, scikit-learn, XGBoost)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Mahmoud El Bergui" }]
+
+[tool.ruff]
+line-length = 150
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501", "E731"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
