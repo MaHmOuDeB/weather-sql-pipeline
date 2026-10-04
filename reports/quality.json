@@ -1,0 +1,90 @@
+{
+  "tables": {
+    "stg_weather": 8725,
+    "dim_location": 236,
+    "dim_condition": 27,
+    "fact_observation": 8725
+  },
+  "checks": [
+    {
+      "check_name": "staging row count equals fact row count",
+      "severity": "error",
+      "failing_rows": 0
+    },
+    {
+      "check_name": "location + observation time is unique",
+      "severity": "error",
+      "failing_rows": 0
+    },
+    {
+      "check_name": "no missing keys or timestamps",
+      "severity": "error",
+      "failing_rows": 0
+    },
+    {
+      "check_name": "humidity within 0-100",
+      "severity": "error",
+      "failing_rows": 0
+    },
+    {
+      "check_name": "cloud cover within 0-100",
+      "severity": "error",
+      "failing_rows": 0
+    },
+    {
+      "check_name": "UV index not negative",
+      "severity": "error",
+      "failing_rows": 0
+    },
+    {
+      "check_name": "precipitation and visibility not negative",
+      "severity": "error",
+      "failing_rows": 0
+    },
+    {
+      "check_name": "pressure plausible (850-1090 hPa)",
+      "severity": "error",
+      "failing_rows": 0
+    },
+    {
+      "check_name": "temperature plausible (-60 to 60 C)",
+      "severity": "error",
+      "failing_rows": 0
+    },
+    {
+      "check_name": "latitude / longitude valid",
+      "severity": "error",
+      "failing_rows": 0
+    },
+    {
+      "check_name": "Celsius and Fahrenheit columns agree (within 0.5 F)",
+      "severity": "error",
+      "failing_rows": 0
+    },
+    {
+      "check_name": "kph and mph columns agree (within 0.2 mph)",
+      "severity": "error",
+      "failing_rows": 0
+    },
+    {
+      "check_name": "gusts not lower than sustained wind",
+      "severity": "warn",
+      "failing_rows": 0
+    },
+    {
+      "check_name": "wind above 150 km/h (review, may be real)",
+      "severity": "warn",
+      "failing_rows": 5
+    },
+    {
+      "check_name": "condition spellings merged by lower-casing and trimming",
+      "severity": "info",
+      "failing_rows": 1
+    },
+    {
+      "check_name": "locations observed fewer than 20 times",
+      "severity": "warn",
+      "failing_rows": 43
+    }
+  ]
+}

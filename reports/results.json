@@ -1,0 +1,199 @@
+{
+  "rows": 8725,
+  "locations": 236,
+  "countries": 191,
+  "period": [
+    "2024-05-16",
+    "2024-06-28"
+  ],
+  "trends": {
+    "visibility_by_condition": {
+      "H": 1572.5,
+      "p_value": 0.0,
+      "epsilon_squared": 0.18,
+      "medians": {
+        "clear / sunny": 10.0,
+        "cloudy": 10.0,
+        "fog / mist": 4.0,
+        "rain / thunder": 10.0
+      }
+    },
+    "precip_by_condition": {
+      "H": 3099.8,
+      "p_value": 0.0,
+      "epsilon_squared": 0.355,
+      "medians": {
+        "clear / sunny": 0.0,
+        "cloudy": 0.0,
+        "fog / mist": 0.0,
+        "rain / thunder": 0.13
+      }
+    },
+    "temperature_by_condition": {
+      "H": 366.7,
+      "p_value": 3.596185620071637e-79,
+      "epsilon_squared": 0.042,
+      "medians": {
+        "clear / sunny": 27.1,
+        "cloudy": 27.0,
+        "fog / mist": 25.0,
+        "rain / thunder": 24.8
+      },
+      "ols_with_latitude_control": {
+        "r2_condition_only": 0.044,
+        "r2_with_latitude": 0.196
+      }
+    },
+    "uv_vs_cloud": {
+      "all_hours": {
+        "rho": -0.409,
+        "ci95": [
+          -0.426,
+          -0.391
+        ],
+        "n": 8725
+      },
+      "midday_10_to_15h_local": {
+        "rho": -0.398,
+        "ci95": [
+          -0.432,
+          -0.361
+        ],
+        "n": 2634
+      },
+      "midday_rows": 2634,
+      "share_of_rows_with_uv_at_floor_of_1": 0.198
+    },
+    "temperature_vs_humidity": {
+      "pooled": {
+        "rho": -0.345,
+        "ci95": [
+          -0.364,
+          -0.325
+        ],
+        "n": 8725
+      },
+      "within_location": {
+        "rho": -0.615,
+        "ci95": [
+          -0.63,
+          -0.6
+        ],
+        "n": 8725
+      }
+    }
+  },
+  "benchmark_wet_vs_dry": {
+    "label": "rain, drizzle, showers or thunder happening now (ambiguous 'nearby/possible' rows left out)",
+    "rows": 8163,
+    "wet_share": 0.1,
+    "majority_class_accuracy": 0.9,
+    "features": [
+      "humidity",
+      "cloud",
+      "pressure_mb",
+      "temperature_celsius",
+      "wind_kph",
+      "gust_kph",
+      "visibility_km",
+      "uv_index",
+      "wind_degree",
+      "abs_lat",
+      "longitude"
+    ],
+    "by_location_folds": {
+      "k-NN (k=15)": {
+        "accuracy": [
+          0.905,
+          0.01
+        ],
+        "f1_wet": [
+          0.3,
+          0.048
+        ],
+        "roc_auc": [
+          0.84,
+          0.011
+        ]
+      },
+      "Random Forest": {
+        "accuracy": [
+          0.921,
+          0.01
+        ],
+        "f1_wet": [
+          0.467,
+          0.051
+        ],
+        "roc_auc": [
+          0.901,
+          0.015
+        ]
+      },
+      "XGBoost": {
+        "accuracy": [
+          0.924,
+          0.008
+        ],
+        "f1_wet": [
+          0.515,
+          0.04
+        ],
+        "roc_auc": [
+          0.911,
+          0.011
+        ]
+      }
+    },
+    "random_row_folds": {
+      "k-NN (k=15)": {
+        "accuracy": [
+          0.91,
+          0.007
+        ],
+        "f1_wet": [
+          0.319,
+          0.022
+        ],
+        "roc_auc": [
+          0.874,
+          0.006
+        ]
+      },
+      "Random Forest": {
+        "accuracy": [
+          0.927,
+          0.007
+        ],
+        "f1_wet": [
+          0.509,
+          0.034
+        ],
+        "roc_auc": [
+          0.927,
+          0.012
+        ]
+      },
+      "XGBoost": {
+        "accuracy": [
+          0.928,
+          0.006
+        ],
+        "f1_wet": [
+          0.537,
+          0.038
+        ],
+        "roc_auc": [
+          0.929,
+          0.011
+        ]
+      }
+    }
+  },
+  "leakage_demo": {
+    "target": "temperature_celsius",
+    "r2_with_fahrenheit_and_feels_like": 0.999,
+    "r2_with_fahrenheit_only": 0.999,
+    "r2_honest_features_only": 0.772
+  }
+}
