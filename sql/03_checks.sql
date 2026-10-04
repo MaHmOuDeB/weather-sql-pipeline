@@ -1,10 +1,15 @@
 -- Data-quality checks. Each row: name, severity, number of failing rows.  Severity 'error' stops the pipeline.
-SELECT 'staging row count equals fact row count' AS check_name, 'error' AS severity,
-       ABS((SELECT COUNT(*) FROM stg_weather) - (SELECT COUNT(*) FROM fact_observation)) AS failing_rows
+SELECT 'staging rows = fact rows + quarantined rows' AS check_name, 'error' AS severity,
+       ABS((SELECT COUNT(*) FROM stg_weather) - (SELECT COUNT(*) FROM fact_observation) - (SELECT COUNT(*) FROM quarantine_observation)) AS failing_rows
 UNION ALL SELECT 'location + observation time is unique', 'error',
        (SELECT COUNT(*) FROM (SELECT location_id, observed_at_utc FROM fact_observation GROUP BY ALL HAVING COUNT(*) > 1))
 UNION ALL SELECT 'no missing keys or timestamps', 'error',
        (SELECT COUNT(*) FROM fact_observation WHERE location_id IS NULL OR condition_id IS NULL OR observed_at_utc IS NULL)
+UNION ALL SELECT 'no missing values in the measurement columns', 'error',
+       (SELECT COUNT(*) FROM fact_observation WHERE temperature_celsius IS NULL OR humidity IS NULL OR cloud IS NULL OR pressure_mb IS NULL
+           OR wind_kph IS NULL OR gust_kph IS NULL OR visibility_km IS NULL OR uv_index IS NULL OR precip_mm IS NULL)
+UNION ALL SELECT 'each location has a single coordinate pair', 'error',
+       (SELECT COUNT(*) FROM (SELECT country, location_name FROM stg_weather GROUP BY ALL HAVING COUNT(DISTINCT (latitude, longitude)) > 1))
 UNION ALL SELECT 'humidity within 0-100', 'error', (SELECT COUNT(*) FROM fact_observation WHERE humidity NOT BETWEEN 0 AND 100)
 UNION ALL SELECT 'cloud cover within 0-100', 'error', (SELECT COUNT(*) FROM fact_observation WHERE cloud NOT BETWEEN 0 AND 100)
 UNION ALL SELECT 'UV index not negative', 'error', (SELECT COUNT(*) FROM fact_observation WHERE uv_index < 0)
@@ -17,7 +22,7 @@ UNION ALL SELECT 'Celsius and Fahrenheit columns agree (within 0.5 F)', 'error',
 UNION ALL SELECT 'kph and mph columns agree (within 0.2 mph)', 'error',
        (SELECT COUNT(*) FROM stg_weather WHERE ABS(wind_kph / 1.609344 - wind_mph) > 0.2)
 UNION ALL SELECT 'gusts not lower than sustained wind', 'warn', (SELECT COUNT(*) FROM fact_observation WHERE gust_kph < wind_kph)
-UNION ALL SELECT 'wind above 150 km/h (review, may be real)', 'warn', (SELECT COUNT(*) FROM fact_observation WHERE wind_kph > 150)
+UNION ALL SELECT 'rows quarantined as sensor errors (wind above 150 km/h)', 'warn', (SELECT COUNT(*) FROM quarantine_observation)
 UNION ALL SELECT 'condition spellings merged by lower-casing and trimming', 'info',
        (SELECT COUNT(DISTINCT condition_text) - COUNT(DISTINCT lower(trim(condition_text))) FROM read_csv_auto('{csv_path}'))
 UNION ALL SELECT 'locations observed fewer than 20 times', 'warn',

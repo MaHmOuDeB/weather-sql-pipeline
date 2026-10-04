@@ -9,6 +9,8 @@ FROM stg_weather GROUP BY country, location_name;
 CREATE OR REPLACE TABLE dim_condition AS
 SELECT ROW_NUMBER() OVER (ORDER BY condition_clean) AS condition_id, condition_clean AS condition_text,
        CASE WHEN regexp_matches(condition_clean, 'fog|mist')                         THEN 'fog / mist'
+            WHEN regexp_matches(condition_clean, 'rain|drizzle|shower|thunder')
+                 AND regexp_matches(condition_clean, 'nearby|possible')              THEN 'rain nearby / possible'
             WHEN regexp_matches(condition_clean, 'rain|drizzle|shower|thunder')      THEN 'rain / thunder'
             WHEN regexp_matches(condition_clean, 'overcast|cloudy')                  THEN 'cloudy'
             WHEN regexp_matches(condition_clean, 'sunny|clear')                      THEN 'clear / sunny'
@@ -18,10 +20,16 @@ SELECT ROW_NUMBER() OVER (ORDER BY condition_clean) AS condition_id, condition_c
             ELSE FALSE END AS is_wet
 FROM (SELECT DISTINCT condition_clean FROM stg_weather);
 
+-- Sensor errors are quarantined, not silently kept: all five readings above 150 km/h report 'partly cloudy' at ordinary
+-- pressure, and one says 2,963 km/h.
+CREATE OR REPLACE TABLE quarantine_observation AS
+SELECT s.*, 'wind above 150 km/h with ordinary conditions' AS reason FROM stg_weather s WHERE s.wind_kph > 150;
+
 CREATE OR REPLACE TABLE fact_observation AS
 SELECT l.location_id, c.condition_id, s.observed_at_local, s.observed_at_utc,
        s.temperature_celsius, s.feels_like_celsius, s.wind_kph, s.wind_degree, s.gust_kph, s.pressure_mb, s.precip_mm,
        s.humidity, s.cloud, s.visibility_km, s.uv_index, s.pm25
 FROM stg_weather s
 JOIN dim_location  l ON l.country = s.country AND l.location_name = s.location_name
-JOIN dim_condition c ON c.condition_text = s.condition_clean;
+JOIN dim_condition c ON c.condition_text = s.condition_clean
+WHERE NOT COALESCE(s.wind_kph > 150, FALSE);

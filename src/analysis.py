@@ -20,6 +20,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 import statsmodels.formula.api as smf  # noqa: E402
 from scipy import stats  # noqa: E402
+from sklearn.dummy import DummyClassifier  # noqa: E402
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor  # noqa: E402
 from sklearn.metrics import accuracy_score, average_precision_score, f1_score, precision_recall_curve, r2_score, roc_auc_score  # noqa: E402
 from sklearn.model_selection import GroupKFold, KFold  # noqa: E402
@@ -51,21 +52,26 @@ def load() -> pd.DataFrame:
 
 # ---------- statistics ----------
 def kruskal_effect(groups: list[pd.Series]) -> dict:
-    """Kruskal-Wallis test with epsilon-squared as the effect size."""
-    h, p = stats.kruskal(*groups)
+    """Kruskal-Wallis H and epsilon-squared as a descriptive effect size.
+
+    Rows from the same place are not independent, so no p-value is reported: it would be far too small.
+    """
+    h = stats.kruskal(*groups)[0]
     n = sum(len(g) for g in groups)
-    return {"H": round(float(h), 1), "p_value": float(p), "epsilon_squared": round(float((h - len(groups) + 1) / (n - len(groups))), 3)}
+    return {"H": round(float(h), 1), "epsilon_squared": round(float((h - len(groups) + 1) / (n - len(groups))), 3)}
 
 
-def spearman_ci(x: pd.Series, y: pd.Series, n_boot: int = 1000) -> dict:
-    """Spearman correlation with a bootstrap 95% interval."""
+def spearman_ci(df: pd.DataFrame, x: str, y: str, n_boot: int = 500) -> dict:
+    """Spearman correlation with a cluster bootstrap 95% interval: places are resampled, not rows."""
     rng = np.random.default_rng(SEED)
-    idx = np.arange(len(x))
+    places = list(df.groupby("location_id").indices.values())
+    xs, ys = df[x].to_numpy(), df[y].to_numpy()
     boots = []
     for _ in range(n_boot):
-        s = rng.choice(idx, len(idx))
-        boots.append(stats.spearmanr(x.iloc[s], y.iloc[s])[0])
-    return {"rho": round(float(stats.spearmanr(x, y)[0]), 3), "ci95": [round(float(np.percentile(boots, 2.5)), 3), round(float(np.percentile(boots, 97.5)), 3)], "n": len(x)}
+        pick = np.concatenate([places[i] for i in rng.integers(0, len(places), len(places))])
+        boots.append(stats.spearmanr(xs[pick], ys[pick])[0])
+    return {"rho": round(float(stats.spearmanr(xs, ys)[0]), 3), "ci95_cluster_bootstrap": [round(float(np.percentile(boots, 2.5)), 3), round(float(np.percentile(boots, 97.5)), 3)],
+            "n": len(df), "places": len(places)}
 
 
 def trend_statistics(df: pd.DataFrame) -> tuple[dict, pd.DataFrame, pd.DataFrame]:
@@ -80,11 +86,14 @@ def trend_statistics(df: pd.DataFrame) -> tuple[dict, pd.DataFrame, pd.DataFrame
         "r2_with_latitude": round(float(smf.ols("temperature_celsius ~ C(condition_group) + abs_lat", data=g).fit().rsquared), 3)}
     # UV depends on the hour (it sits at its floor of 1 overnight), so compare all hours with midday only
     midday = df[df.local_hour.between(10, 15)]
-    out["uv_vs_cloud"] = {"all_hours": spearman_ci(df.cloud, df.uv_index), "midday_10_to_15h_local": spearman_ci(midday.cloud, midday.uv_index),
-                          "midday_rows": len(midday), "share_of_rows_with_uv_at_floor_of_1": round(float((df.uv_index == 1).mean()), 3)}
     within = df.assign(t=df.temperature_celsius - df.groupby("location_id").temperature_celsius.transform("mean"),
-                       h=df.humidity - df.groupby("location_id").humidity.transform("mean"))
-    out["temperature_vs_humidity"] = {"pooled": spearman_ci(df.temperature_celsius, df.humidity), "within_location": spearman_ci(within.t, within.h)}
+                       h=df.humidity - df.groupby("location_id").humidity.transform("mean"),
+                       c=df.cloud - df.groupby("location_id").cloud.transform("mean"),
+                       u=df.uv_index - df.groupby("location_id").uv_index.transform("mean"))
+    out["uv_vs_cloud"] = {"all_places_and_hours": spearman_ci(df, "cloud", "uv_index"), "midday_10_to_15h_local": spearman_ci(midday, "cloud", "uv_index"),
+                          "within_place_all_hours": spearman_ci(within, "c", "u"),
+                          "midday_rows": len(midday), "share_of_rows_with_uv_at_floor_of_1": round(float((df.uv_index == 1).mean()), 3)}
+    out["temperature_vs_humidity"] = {"pooled": spearman_ci(df, "temperature_celsius", "humidity"), "within_place": spearman_ci(within, "t", "h")}
     return out, g, midday, within
 
 
@@ -104,6 +113,7 @@ def plot_trends(g: pd.DataFrame, midday: pd.DataFrame, within: pd.DataFrame) -> 
 # ---------- rain classifier ----------
 def model_factories() -> dict:
     return {
+        "Always dry (baseline)": lambda: DummyClassifier(strategy="prior"),
         "k-NN (k=15)": lambda: make_pipeline(StandardScaler(), KNeighborsClassifier(15)),
         "Random Forest": lambda: RandomForestClassifier(300, min_samples_leaf=3, random_state=SEED, n_jobs=-1),
         "XGBoost": lambda: XGBClassifier(n_estimators=250, max_depth=3, learning_rate=0.05, subsample=.9, random_state=SEED, eval_metric="logloss", n_jobs=1),
@@ -142,7 +152,7 @@ def rain_benchmark(df: pd.DataFrame) -> tuple[dict, dict, np.ndarray]:
 
 def plot_benchmark(bench: dict, oof: dict, y: np.ndarray) -> None:
     fig, axes = plt.subplots(1, 2, figsize=(10, 3.4))
-    names = list(oof)
+    names = [n for n in oof if "baseline" not in n]
     x, w = np.arange(len(names)), .38
     axes[0].bar(x - w / 2, [bench["random_row_folds"][n]["f1_wet"][0] for n in names], w, label="random row folds", color=LIGHT)
     axes[0].bar(x + w / 2, [bench["by_location_folds"][n]["f1_wet"][0] for n in names], w, label="held-out places", color=BLUE)

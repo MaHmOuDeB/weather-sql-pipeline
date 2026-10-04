@@ -36,7 +36,7 @@ def failing(tmp_path, rows):
 
 def test_clean_data_passes_every_error_check(tmp_path):
     res = failing(tmp_path, [row(epoch=1716000000), row(epoch=1716086400, cond="Partly Cloudy"), row(epoch=1716172800, cond="Partly cloudy")])
-    assert all(v == 0 for k, v in res.items() if not k.startswith(("condition spellings", "locations observed", "wind above")))
+    assert all(v == 0 for k, v in res.items() if not k.startswith(("condition spellings", "locations observed", "rows quarantined")))
 
 
 def test_condition_spellings_are_merged_and_wet_label_is_correct(tmp_path):
@@ -53,3 +53,36 @@ def test_checks_catch_impossible_humidity_duplicates_and_unit_mismatch(tmp_path)
     assert res["humidity within 0-100"] == 1
     assert res["location + observation time is unique"] == 1          # first two rows share location and time
     assert res["Celsius and Fahrenheit columns agree (within 0.5 F)"] == 1
+
+
+def test_missing_measurements_are_caught(tmp_path):
+    res = failing(tmp_path, [row(hum=""), row(epoch=1716086400)])
+    assert res["no missing values in the measurement columns"] == 1
+
+
+def test_impossible_wind_is_quarantined_not_kept(tmp_path):
+    p = make(tmp_path, [row(), row(epoch=1716086400, wind_kph=2963.2, gust_kph=2970.0, wind_mph=1841.3)])
+    con = build(p)
+    assert con.execute("SELECT COUNT(*) FROM fact_observation").fetchone()[0] == 1
+    assert con.execute("SELECT COUNT(*) FROM quarantine_observation").fetchone()[0] == 1
+    checks = {c["check_name"]: c["failing_rows"] for c in run_checks(con, p)}
+    assert checks["staging rows = fact rows + quarantined rows"] == 0
+
+
+def test_rain_nearby_is_its_own_group_and_not_in_the_wet_label(tmp_path):
+    p = make(tmp_path, [row(cond="Light rain"), row(epoch=1716086400, cond="Patchy rain nearby")])
+    rows = dict(build(p).execute("SELECT condition_text, condition_group FROM dim_condition").fetchall())
+    assert rows["light rain"] == "rain / thunder" and rows["patchy rain nearby"] == "rain nearby / possible"
+
+
+def test_a_failing_error_check_leaves_no_warehouse(tmp_path, monkeypatch):
+    import pipeline
+    p = make(tmp_path, [row(hum=140)])
+    monkeypatch.setattr(pipeline, "ROOT", tmp_path)
+    (tmp_path / "data").mkdir()
+    monkeypatch.setattr(sys, "argv", ["pipeline.py", str(p)])
+    try:
+        pipeline.main()
+    except SystemExit:
+        pass
+    assert not (tmp_path / "data" / "warehouse.duckdb").exists()

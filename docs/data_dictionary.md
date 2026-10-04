@@ -13,10 +13,10 @@
 |---|---|
 | condition_id | Surrogate key |
 | condition_text | Weather text, lower-cased and trimmed |
-| condition_group | `clear / sunny`, `cloudy`, `fog / mist`, `rain / thunder` or `other` |
+| condition_group | `clear / sunny`, `cloudy`, `fog / mist`, `rain / thunder`, `rain nearby / possible` or `other` |
 | is_wet | TRUE for rain, drizzle, showers or thunder happening now; FALSE for dry conditions; NULL when the text says rain is only nearby or possible |
 
-## fact_observation (8,725 rows, one per location and observation time)
+## fact_observation (8,720 rows, one per location and observation time)
 | Column | Unit | Meaning |
 |---|---|---|
 | observed_at_local / observed_at_utc | | When the reading was taken |
@@ -31,3 +31,7 @@
 
 The raw file also carries Fahrenheit, mph, inch and mile copies of the metric columns. They are dropped after the
 unit-consistency checks prove they are exact conversions.
+
+## quarantine_observation (5 rows)
+Raw rows removed as sensor errors, with a `reason` column. All five report a sustained wind above 150 km/h (172 to 2,963 km/h)
+together with "partly cloudy" and ordinary pressure, so they are treated as faulty readings, not storms.
