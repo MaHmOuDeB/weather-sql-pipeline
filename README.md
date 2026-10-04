@@ -35,21 +35,27 @@ erDiagram
     dim_location ||--o{ fact_observation : "location_id"
     dim_condition ||--o{ fact_observation : "condition_id"
     stg_weather ||--o{ quarantine_observation : "sensor errors"
-    dim_location { int location_id PK
+    dim_location {
+        int location_id PK
         string country
         string location_name
         float latitude
-        float longitude }
-    dim_condition { int condition_id PK
+        float longitude
+    }
+    dim_condition {
+        int condition_id PK
         string condition_text
         string condition_group
-        bool is_wet }
-    fact_observation { int location_id FK
+        bool is_wet
+    }
+    fact_observation {
+        int location_id FK
         int condition_id FK
         timestamp observed_at_utc
         float temperature_celsius
         float humidity
-        float precip_mm }
+        float precip_mm
+    }
 ```
 
 | Step | What it does |
