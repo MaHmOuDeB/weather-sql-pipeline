@@ -3,13 +3,31 @@ name = "weather-sql-pipeline"
 version = "1.0.0"
 description = "SQL star schema, automated data-quality checks and a fair model benchmark on the Global Weather Repository (DuckDB, scikit-learn, XGBoost)"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Mahmoud El Bergui" }]
+dependencies = [
+    "duckdb>=1.1",
+    "pandas>=2.1",
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "statsmodels>=0.14",
+    "scikit-learn>=1.4",
+    "xgboost>=2.0,<3",
+    "matplotlib>=3.8,<3.10",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.5"]
+
+[tool.uv]
+package = false
+# Resolve as of this date, keep matplotlib 3.9 and XGBoost 2.x: that reproduces reports/results.json and reports/figures (XGBoost 3 changes the XGBoost scores).
+exclude-newer = "2025-10-04T00:00:00Z"
 
 [tool.ruff]
 line-length = 150
-target-version = "py39"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]

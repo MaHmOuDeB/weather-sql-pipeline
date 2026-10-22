@@ -1,0 +1,445 @@
+{
+ "_meta": {
+  "dataset": {
+   "licence": "Not stated (Kaggle: 'Other (specified in description)'; none given)",
+   "name": "Global Weather Repository",
+   "url": "https://www.kaggle.com/datasets/nelgiriyewithana/global-weather-repository"
+  },
+  "engine": {
+   "duckdb": "1.4.0",
+   "numpy": "2.3.3",
+   "pandas": "2.3.3",
+   "python": "3.12",
+   "scikit-learn": "1.7.2",
+   "xgboost": "2.1.4"
+  },
+  "generator": "src/export_site.py",
+  "inputs": [
+   {
+    "path": "data/GlobalWeatherRepository.csv",
+    "rows": 8725,
+    "sha256": "238e4958dee28485f749518f5a89f31862db9909df2bedd8e0a7251e82fb324d"
+   }
+  ],
+  "provenance": "public-data",
+  "schema": "weather/1",
+  "source": "weather"
+ },
+ "facts": {
+  "baseline.dry_accuracy": {
+   "decimals": 0,
+   "from": "results.json#/benchmark_wet_vs_dry/majority_class_accuracy",
+   "label": "Accuracy of always predicting dry",
+   "unit": "share",
+   "value": 0.899
+  },
+  "checks.count": {
+   "decimals": 0,
+   "from": "quality.json#/checks",
+   "label": "Automated data-quality checks",
+   "unit": "count",
+   "value": 18
+  },
+  "checks.error_count": {
+   "decimals": 0,
+   "from": "quality.json#/checks",
+   "label": "Checks whose failure stops the pipeline (error level)",
+   "unit": "count",
+   "value": 14
+  },
+  "checks.sparse_locations": {
+   "decimals": 0,
+   "from": "quality.json#/checks/17/failing_rows",
+   "label": "Places observed fewer than 20 times",
+   "unit": "count",
+   "value": 43
+  },
+  "data.countries": {
+   "decimals": 0,
+   "from": "results.json#/countries",
+   "label": "Countries observed",
+   "unit": "count",
+   "value": 191
+  },
+  "data.locations": {
+   "decimals": 0,
+   "from": "quality.json#/tables/dim_location",
+   "label": "Places observed",
+   "unit": "count",
+   "value": 236
+  },
+  "data.observations": {
+   "decimals": 0,
+   "from": "quality.json#/tables/stg_weather",
+   "label": "Weather observations loaded",
+   "unit": "count",
+   "value": 8725
+  },
+  "data.wet_share": {
+   "decimals": 0,
+   "from": "results.json#/benchmark_wet_vs_dry/wet_share",
+   "label": "Share of labelled observations where it is raining now",
+   "unit": "share",
+   "value": 0.101
+  },
+  "model.rf_f1": {
+   "decimals": 2,
+   "from": "results.json#/benchmark_wet_vs_dry/by_location_folds/Random Forest/f1_wet/0",
+   "label": "F1 on rain, random forest, tested on places it had not seen (mean of 5 folds)",
+   "unit": "decimal",
+   "value": 0.46
+  },
+  "model.xgb_auc": {
+   "decimals": 2,
+   "from": "results.json#/benchmark_wet_vs_dry/by_location_folds/XGBoost/roc_auc/0",
+   "label": "ROC AUC, XGBoost, tested on places it had not seen (mean of 5 folds)",
+   "unit": "decimal",
+   "value": 0.914
+  },
+  "model.xgb_f1": {
+   "decimals": 2,
+   "from": "results.json#/benchmark_wet_vs_dry/by_location_folds/XGBoost/f1_wet/0",
+   "label": "F1 on rain, XGBoost, tested on places it had not seen (mean of 5 folds)",
+   "unit": "decimal",
+   "value": 0.52
+  },
+  "model.xgb_f1_sd": {
+   "decimals": 2,
+   "from": "results.json#/benchmark_wet_vs_dry/by_location_folds/XGBoost/f1_wet/1",
+   "label": "Standard deviation of that F1 across the 5 folds",
+   "unit": "decimal",
+   "value": 0.06
+  },
+  "quarantine.max_wind_kmh": {
+   "decimals": 0,
+   "from": "warehouse.duckdb#quarantine_observation/max(wind_kph)",
+   "label": "Highest held-back wind speed",
+   "unit": "kmh",
+   "value": 2963.2
+  },
+  "quarantine.min_wind_kmh": {
+   "decimals": 0,
+   "from": "warehouse.duckdb#quarantine_observation/min(wind_kph)",
+   "label": "Lowest held-back wind speed",
+   "unit": "kmh",
+   "value": 172.1
+  },
+  "quarantine.rows": {
+   "decimals": 0,
+   "from": "quality.json#/tables/quarantine_observation",
+   "label": "Readings held back as sensor errors",
+   "unit": "count",
+   "value": 5
+  },
+  "quarantine.threshold_kmh": {
+   "decimals": 0,
+   "from": "sql/02_model.sql:23-26",
+   "label": "Rule: wind above 150 km/h with ordinary conditions is held back",
+   "unit": "kmh",
+   "value": 150
+  }
+ },
+ "tables": {
+  "checks": [
+   {
+    "failing_rows": 0,
+    "name": "staging rows = fact rows + quarantined rows",
+    "severity": "error"
+   },
+   {
+    "failing_rows": 0,
+    "name": "location + observation time is unique",
+    "severity": "error"
+   },
+   {
+    "failing_rows": 0,
+    "name": "no missing keys or timestamps",
+    "severity": "error"
+   },
+   {
+    "failing_rows": 0,
+    "name": "no missing values in the measurement columns",
+    "severity": "error"
+   },
+   {
+    "failing_rows": 0,
+    "name": "each location has a single coordinate pair",
+    "severity": "error"
+   },
+   {
+    "failing_rows": 0,
+    "name": "humidity within 0-100",
+    "severity": "error"
+   },
+   {
+    "failing_rows": 0,
+    "name": "cloud cover within 0-100",
+    "severity": "error"
+   },
+   {
+    "failing_rows": 0,
+    "name": "UV index not negative",
+    "severity": "error"
+   },
+   {
+    "failing_rows": 0,
+    "name": "precipitation and visibility not negative",
+    "severity": "error"
+   },
+   {
+    "failing_rows": 0,
+    "name": "pressure plausible (850-1090 hPa)",
+    "severity": "error"
+   },
+   {
+    "failing_rows": 0,
+    "name": "temperature plausible (-60 to 60 C)",
+    "severity": "error"
+   },
+   {
+    "failing_rows": 0,
+    "name": "latitude / longitude valid",
+    "severity": "error"
+   },
+   {
+    "failing_rows": 0,
+    "name": "Celsius and Fahrenheit columns agree (within 0.5 F)",
+    "severity": "error"
+   },
+   {
+    "failing_rows": 0,
+    "name": "kph and mph columns agree (within 0.2 mph)",
+    "severity": "error"
+   },
+   {
+    "failing_rows": 0,
+    "name": "gusts not lower than sustained wind",
+    "severity": "warn"
+   },
+   {
+    "failing_rows": 5,
+    "name": "rows quarantined as sensor errors (wind above 150 km/h)",
+    "severity": "warn"
+   },
+   {
+    "failing_rows": 1,
+    "name": "condition spellings merged by lower-casing and trimming",
+    "severity": "info"
+   },
+   {
+    "failing_rows": 43,
+    "name": "locations observed fewer than 20 times",
+    "severity": "warn"
+   }
+  ],
+  "cv_folds": [
+   {
+    "accuracy": 0.9069,
+    "avg_precision": 0.0931,
+    "f1_rain": 0.0,
+    "fold": 1,
+    "model": "Always dry (baseline)",
+    "roc_auc": 0.5,
+    "test_places": 47,
+    "test_rows": 1632
+   },
+   {
+    "accuracy": 0.9381,
+    "avg_precision": 0.0619,
+    "f1_rain": 0.0,
+    "fold": 2,
+    "model": "Always dry (baseline)",
+    "roc_auc": 0.5,
+    "test_places": 46,
+    "test_rows": 1632
+   },
+   {
+    "accuracy": 0.8805,
+    "avg_precision": 0.1195,
+    "f1_rain": 0.0,
+    "fold": 3,
+    "model": "Always dry (baseline)",
+    "roc_auc": 0.5,
+    "test_places": 46,
+    "test_rows": 1632
+   },
+   {
+    "accuracy": 0.8988,
+    "avg_precision": 0.1012,
+    "f1_rain": 0.0,
+    "fold": 4,
+    "model": "Always dry (baseline)",
+    "roc_auc": 0.5,
+    "test_places": 45,
+    "test_rows": 1631
+   },
+   {
+    "accuracy": 0.8731,
+    "avg_precision": 0.1269,
+    "f1_rain": 0.0,
+    "fold": 5,
+    "model": "Always dry (baseline)",
+    "roc_auc": 0.5,
+    "test_places": 45,
+    "test_rows": 1631
+   },
+   {
+    "accuracy": 0.9105,
+    "avg_precision": 0.4105,
+    "f1_rain": 0.2626,
+    "fold": 1,
+    "model": "k-NN (k=15)",
+    "roc_auc": 0.8405,
+    "test_places": 47,
+    "test_rows": 1632
+   },
+   {
+    "accuracy": 0.9375,
+    "avg_precision": 0.357,
+    "f1_rain": 0.3289,
+    "fold": 2,
+    "model": "k-NN (k=15)",
+    "roc_auc": 0.9044,
+    "test_places": 46,
+    "test_rows": 1632
+   },
+   {
+    "accuracy": 0.8885,
+    "avg_precision": 0.4664,
+    "f1_rain": 0.1802,
+    "fold": 3,
+    "model": "k-NN (k=15)",
+    "roc_auc": 0.8581,
+    "test_places": 46,
+    "test_rows": 1632
+   },
+   {
+    "accuracy": 0.9056,
+    "avg_precision": 0.4249,
+    "f1_rain": 0.3186,
+    "fold": 4,
+    "model": "k-NN (k=15)",
+    "roc_auc": 0.8373,
+    "test_places": 45,
+    "test_rows": 1631
+   },
+   {
+    "accuracy": 0.8829,
+    "avg_precision": 0.4244,
+    "f1_rain": 0.2952,
+    "fold": 5,
+    "model": "k-NN (k=15)",
+    "roc_auc": 0.8328,
+    "test_places": 45,
+    "test_rows": 1631
+   },
+   {
+    "accuracy": 0.9222,
+    "avg_precision": 0.5602,
+    "f1_rain": 0.4502,
+    "fold": 1,
+    "model": "Random Forest",
+    "roc_auc": 0.9115,
+    "test_places": 47,
+    "test_rows": 1632
+   },
+   {
+    "accuracy": 0.9485,
+    "avg_precision": 0.6075,
+    "f1_rain": 0.5059,
+    "fold": 2,
+    "model": "Random Forest",
+    "roc_auc": 0.9426,
+    "test_places": 46,
+    "test_rows": 1632
+   },
+   {
+    "accuracy": 0.9056,
+    "avg_precision": 0.6474,
+    "f1_rain": 0.3889,
+    "fold": 3,
+    "model": "Random Forest",
+    "roc_auc": 0.9057,
+    "test_places": 46,
+    "test_rows": 1632
+   },
+   {
+    "accuracy": 0.9074,
+    "avg_precision": 0.5141,
+    "f1_rain": 0.4302,
+    "fold": 4,
+    "model": "Random Forest",
+    "roc_auc": 0.8795,
+    "test_places": 45,
+    "test_rows": 1631
+   },
+   {
+    "accuracy": 0.9099,
+    "avg_precision": 0.6216,
+    "f1_rain": 0.5243,
+    "fold": 5,
+    "model": "Random Forest",
+    "roc_auc": 0.9112,
+    "test_places": 45,
+    "test_rows": 1631
+   },
+   {
+    "accuracy": 0.924,
+    "avg_precision": 0.5783,
+    "f1_rain": 0.504,
+    "fold": 1,
+    "model": "XGBoost",
+    "roc_auc": 0.9132,
+    "test_places": 47,
+    "test_rows": 1632
+   },
+   {
+    "accuracy": 0.9491,
+    "avg_precision": 0.5572,
+    "f1_rain": 0.5699,
+    "fold": 2,
+    "model": "XGBoost",
+    "roc_auc": 0.9436,
+    "test_places": 46,
+    "test_rows": 1632
+   },
+   {
+    "accuracy": 0.9081,
+    "avg_precision": 0.6666,
+    "f1_rain": 0.4318,
+    "fold": 3,
+    "model": "XGBoost",
+    "roc_auc": 0.9229,
+    "test_places": 46,
+    "test_rows": 1632
+   },
+   {
+    "accuracy": 0.916,
+    "avg_precision": 0.5278,
+    "f1_rain": 0.4907,
+    "fold": 4,
+    "model": "XGBoost",
+    "roc_auc": 0.8795,
+    "test_places": 45,
+    "test_rows": 1631
+   },
+   {
+    "accuracy": 0.9178,
+    "avg_precision": 0.6408,
+    "f1_rain": 0.6012,
+    "fold": 5,
+    "model": "XGBoost",
+    "roc_auc": 0.9106,
+    "test_places": 45,
+    "test_rows": 1631
+   }
+  ],
+  "table_rows": {
+   "dim_condition": 27,
+   "dim_location": 236,
+   "fact_observation": 8720,
+   "quarantine_observation": 5,
+   "stg_weather": 8725
+  }
+ }
+}

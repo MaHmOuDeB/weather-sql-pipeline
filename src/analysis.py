@@ -120,20 +120,24 @@ def model_factories() -> dict:
     }
 
 
-def cross_validate(make, x: np.ndarray, y: np.ndarray, splits) -> tuple[dict, np.ndarray]:
-    """Mean and standard deviation of the metrics across folds, plus out-of-fold probabilities."""
-    acc, f1, auc, ap = [], [], [], []
+def fold_scores(make, x: np.ndarray, y: np.ndarray, splits) -> tuple[list[dict], np.ndarray]:
+    """The metrics of each fold (accuracy, F1 on the wet class, ROC AUC, average precision), plus out-of-fold probabilities."""
+    folds = []
     oof = np.zeros(len(y))
     for tr, te in splits:
         model = make().fit(x[tr], y[tr])
         pred, prob = model.predict(x[te]), model.predict_proba(x[te])[:, 1]
         oof[te] = prob
-        acc.append(accuracy_score(y[te], pred))
-        f1.append(f1_score(y[te], pred, zero_division=0))
-        auc.append(roc_auc_score(y[te], prob))
-        ap.append(average_precision_score(y[te], prob))
-    pack = lambda v: [round(float(np.mean(v)), 3), round(float(np.std(v)), 3)]  # noqa: E731
-    return {"accuracy": pack(acc), "f1_wet": pack(f1), "roc_auc": pack(auc), "avg_precision": pack(ap)}, oof
+        folds.append({"accuracy": accuracy_score(y[te], pred), "f1_wet": f1_score(y[te], pred, zero_division=0),
+                      "roc_auc": roc_auc_score(y[te], prob), "avg_precision": average_precision_score(y[te], prob)})
+    return folds, oof
+
+
+def cross_validate(make, x: np.ndarray, y: np.ndarray, splits) -> tuple[dict, np.ndarray]:
+    """Mean and standard deviation of the metrics across folds, plus out-of-fold probabilities."""
+    folds, oof = fold_scores(make, x, y, splits)
+    pack = lambda key: [round(float(np.mean([f[key] for f in folds])), 3), round(float(np.std([f[key] for f in folds])), 3)]  # noqa: E731
+    return {key: pack(key) for key in ("accuracy", "f1_wet", "roc_auc", "avg_precision")}, oof
 
 
 def rain_benchmark(df: pd.DataFrame) -> tuple[dict, dict, np.ndarray]:

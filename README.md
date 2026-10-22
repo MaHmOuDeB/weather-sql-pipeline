@@ -1,7 +1,7 @@
 # Global weather: SQL pipeline, data-quality checks and a fair model benchmark
 
 [![CI](https://github.com/MaHmOuDeB/weather-sql-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/MaHmOuDeB/weather-sql-pipeline/actions/workflows/ci.yml)
-![Python](https://img.shields.io/badge/python-3.9%2B-blue)
+![Python](https://img.shields.io/badge/python-3.12%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 A small, tested data pipeline over 8,725 weather observations from 236 locations in 191 countries (16 May to 28 Jun 2024): raw
@@ -134,12 +134,18 @@ Download Kaggle's *Global Weather Repository* (check the dataset page for the li
 `data/GlobalWeatherRepository.csv`; the raw file is not in this repo. Then:
 
 ```bash
-make setup      # pip install -r requirements.txt
+make setup      # uv sync --locked (needs uv, https://docs.astral.sh/uv/)
 make pipeline   # builds data/warehouse.duckdb, runs the checks, writes reports/quality.json
 make analysis   # statistics and the benchmark -> reports/results.json, reports/figures/
+make export     # reports/site/weather.json, the numbers the portfolio site reads
 make test
 ```
 
-Results are reproducible: fixed seeds and a fixed row order give identical output on every run.
+Results are reproducible: fixed seeds and a fixed row order give identical output on every run, with the library versions in
+`uv.lock`. `pyproject.toml` resolves packages as of 4 Oct 2025 and keeps matplotlib 3.9 and XGBoost 2.x, because newer versions of
+those change the XGBoost scores and the figures slightly.
+
+`reports/site/weather.json` holds the numbers, the 18 checks and the per-fold scores. It does not contain the five quarantined
+readings: the dataset's licence is not stated, so it carries only the rule, the count and the range of those readings.
 
 Data: Kaggle, *Global Weather Repository* (daily snapshots from WeatherAPI.com).

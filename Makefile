@@ -1,18 +1,21 @@
-.PHONY: setup pipeline analysis test lint all
+.PHONY: setup pipeline analysis export test lint all
 
 setup:
-	python -m pip install -r requirements.txt
+	uv sync --locked
 
 pipeline:
-	python src/pipeline.py
+	uv run python src/pipeline.py
 
 analysis:
-	python src/analysis.py
+	uv run python src/analysis.py
+
+export:
+	uv run python src/export_site.py
 
 test:
-	python -m pytest -q
+	uv run pytest -q
 
 lint:
-	python -m ruff check .
+	uv run ruff check .
 
-all: pipeline analysis
+all: pipeline analysis export
