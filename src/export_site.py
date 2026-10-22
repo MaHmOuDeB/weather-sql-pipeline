@@ -42,18 +42,14 @@ def dump(obj: dict) -> str:
 
 
 def quarantine_rows(warehouse: Path = WAREHOUSE) -> list[dict]:
-    """The quarantined readings, weakest first. Used for the count and the range only; never written to the export.
-
-    DuckDB hands back TIMESTAMPTZ in the machine's zone, so the session is pinned to UTC.
-    """
+    """The wind speed of each quarantined reading, weakest first. Used for the count and the range only; never written to the export."""
     con = duckdb.connect(str(warehouse), read_only=True)
     try:
         con.execute("SET TimeZone='UTC'")
-        rows = con.execute("SELECT country, location_name, strftime(observed_at_utc, '%Y-%m-%dT%H:%M:%SZ') AS observed_at_utc, wind_kph "
-                           "FROM quarantine_observation ORDER BY wind_kph, location_name").fetchall()
+        rows = con.execute("SELECT wind_kph FROM quarantine_observation ORDER BY wind_kph").fetchall()
     finally:
         con.close()
-    return [{"country": c, "location_name": n, "observed_at_utc": t, "wind_kph": float(w)} for c, n, t, w in rows]
+    return [{"wind_kph": float(w)} for (w,) in rows]
 
 
 def fold_rows(df: pd.DataFrame) -> list[dict]:

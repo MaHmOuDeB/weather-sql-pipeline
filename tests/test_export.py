@@ -68,7 +68,7 @@ def test_no_quarantined_row_is_exported(export):
     assert set(export["tables"]) == {"checks", "table_rows", "cv_folds"}
     assert "quarantine" not in export["tables"]
     text = json.dumps(export)
-    for name in ("Suva", "Fiji", "2024-05-19", "observed_at", "location_name"):
+    for name in ("location_name", "country", "last_updated", "observed_at", "timezone"):
         assert name not in text, name
 
 
@@ -142,13 +142,11 @@ def test_build_export_does_not_read_the_leakage_section():
 
 
 @needs_warehouse
-def test_quarantine_query_returns_five_rows_sorted_with_suva_first():
-    rows = quarantine_rows(WAREHOUSE)
-    assert len(rows) == 5
-    assert [r["wind_kph"] for r in rows] == sorted(r["wind_kph"] for r in rows)
-    first = rows[0]
-    assert (first["location_name"], first["country"], first["observed_at_utc"], first["wind_kph"]) == ("Suva", "Fiji Islands", "2024-05-19T14:00:00Z", 172.1)
-    assert rows[-1]["wind_kph"] == 2963.2
+def test_quarantine_query_returns_five_rows_sorted_by_wind():
+    winds = [r["wind_kph"] for r in quarantine_rows(WAREHOUSE)]
+    assert len(winds) == 5
+    assert winds == sorted(winds)
+    assert (winds[0], winds[-1]) == (172.1, 2963.2)
 
 
 @needs_warehouse
