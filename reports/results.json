@@ -259,11 +259,5 @@
         ]
       }
     }
-  },
-  "leakage_demo": {
-    "target": "temperature_celsius",
-    "r2_with_fahrenheit_and_feels_like": 1.0,
-    "r2_with_fahrenheit_only": 1.0,
-    "r2_honest_features_only": 0.794
   }
 }
