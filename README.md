@@ -8,14 +8,10 @@ A small, tested data pipeline over 8,725 weather observations from 236 locations
 CSV, staging, a star schema, automated data-quality checks with a quarantine for sensor errors, descriptive statistics with
 honest uncertainty, and a rain classifier scored on places it has never seen.
 
-*Rebuilt in 2026 from my Master's project "Data Engineering and Business Analytics" (2024). Rebuilding it turned up a real problem
-in the first version: it predicted each target from all the other columns, including that target's own unit twin (temperature in
-Fahrenheit for Celsius, visibility in miles for kilometres), which is why it reported errors close to zero. It also scaled the
-data before splitting, a smaller flaw of the same kind. This version removes both.*
+*Built on a public dataset and rebuilt in 2026 from my Master's project "Data Engineering and Business Analytics" (2024).*
 
 **What this shows:** the habits that matter on messy business data, not the weather: reconcile every row, quarantine bad
-readings instead of keeping them, test the checks themselves, report uncertainty that matches how the data was collected, and
-distrust results that look too good.
+readings instead of keeping them, test the checks themselves, and report uncertainty that matches how the data was collected.
 
 ## Results at a glance
 
@@ -24,9 +20,6 @@ distrust results that look too good.
 | Is the data clean? | After quarantining 5 sensor errors (winds of 172 to 2,963 km/h reported as "partly cloudy" at ordinary pressure) all error-level checks pass. 43 of 236 locations have fewer than 20 observations |
 | What does weather change? | Temperature barely depends on the condition (effect size 0.04); where a place is matters more (R-squared 0.04 to 0.19 with latitude). Within one place, humidity falls as temperature rises (rho -0.62) |
 | Can a model tell when it is raining? | Moderately. XGBoost reaches F1 0.52 and ROC AUC 0.91 on places it never saw, about the same as Random Forest. "Always dry" scores 90% accuracy but F1 = 0 |
-| What does a data leak look like? | Predicting Celsius with a Fahrenheit column gives R-squared 1.00; without it, 0.79 |
-
-![Rain classifier](reports/figures/benchmark.png)
 
 ## Pipeline
 
@@ -105,28 +98,13 @@ never seen. Accuracy alone says nothing here, so the table leads with F1 on the 
 | XGBoost | 0.52 ± 0.06 | 0.91 ± 0.02 | 0.59 ± 0.05 | 0.923 |
 
 k-NN is clearly worse; Random Forest and XGBoost cannot be told apart at this sample size, and F1 is at the default 0.5 threshold,
-untuned. Splitting rows at random instead of by place flatters Random Forest (F1 0.53 versus 0.46) and k-NN (0.34 versus 0.28) but
-barely changes XGBoost. Latitude and longitude identify a place, so a model scored on rows from places it trained on can partly
-recognise them. An F1 of about 0.5 still means many rain cases are missed or false alarms, so I would not use this as a forecast.
-
-## The leakage trap
-
-Predicting temperature in Celsius with a random forest, held-out places:
-
-| Features | R-squared |
-|---|---|
-| Humidity, cloud, pressure, wind, visibility, UV, latitude, longitude, local hour | 0.79 |
-| The same plus temperature in Fahrenheit | 1.00 |
-
-The jump to 1.00 is not skill: Fahrenheit is the same number in other units. This case is obvious on purpose; the habit it
-illustrates is to check what the model can see whenever a score looks too good.
+untuned. An F1 of about 0.5 still means many rain cases are missed or false alarms, so I would not use this as a forecast.
 
 ## Limits
 
 - Six weeks of data and about one observation a day per place, so this says nothing about seasons or forecasting.
 - Conditions are the weather service's text labels, not ground truth, and the wet label is a judgement call (documented above).
 - The 150 km/h quarantine threshold is a judgement call; all five rows it removes are implausible on their own evidence.
-- The first version of this project used a standardised copy of the data; this one works in the original units.
 
 ## Reproduce
 

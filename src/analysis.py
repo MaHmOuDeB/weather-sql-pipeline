@@ -21,9 +21,9 @@ import pandas as pd  # noqa: E402
 import statsmodels.formula.api as smf  # noqa: E402
 from scipy import stats  # noqa: E402
 from sklearn.dummy import DummyClassifier  # noqa: E402
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor  # noqa: E402
-from sklearn.metrics import accuracy_score, average_precision_score, f1_score, precision_recall_curve, r2_score, roc_auc_score  # noqa: E402
-from sklearn.model_selection import GroupKFold, KFold  # noqa: E402
+from sklearn.ensemble import RandomForestClassifier  # noqa: E402
+from sklearn.metrics import accuracy_score, average_precision_score, f1_score, precision_recall_curve, roc_auc_score  # noqa: E402
+from sklearn.model_selection import GroupKFold  # noqa: E402
 from sklearn.neighbors import KNeighborsClassifier  # noqa: E402
 from sklearn.pipeline import make_pipeline  # noqa: E402
 from sklearn.preprocessing import StandardScaler  # noqa: E402
@@ -34,8 +34,7 @@ FIG = ROOT / "reports" / "figures"
 SEED = 42
 GROUPS = ["clear / sunny", "cloudy", "fog / mist", "rain / thunder"]
 FEATURES = ["humidity", "cloud", "pressure_mb", "temperature_celsius", "wind_kph", "gust_kph", "visibility_km", "uv_index", "wind_degree", "abs_lat", "longitude"]
-HONEST_TEMPERATURE_FEATURES = ["humidity", "cloud", "pressure_mb", "wind_kph", "visibility_km", "uv_index", "abs_lat", "longitude", "local_hour"]
-BLUE, LIGHT = "#2f5fb3", "#9db8e0"
+BLUE = "#2f5fb3"
 
 
 def load() -> pd.DataFrame:
@@ -140,22 +139,19 @@ def rain_benchmark(df: pd.DataFrame) -> tuple[dict, dict, np.ndarray]:
     d = df[df.is_wet.notna()].copy()
     x, y, groups = d[FEATURES].values, d.is_wet.astype(int).values, d.location_id.values
     by_place = list(GroupKFold(5).split(x, y, groups=groups))
-    by_row = list(KFold(5, shuffle=True, random_state=SEED).split(x))
     out = {"label": "rain, drizzle, showers or thunder happening now (ambiguous 'nearby/possible' rows left out)", "rows": len(d), "wet_share": round(float(y.mean()), 3),
-           "majority_class_accuracy": round(float(1 - y.mean()), 3), "features": FEATURES, "by_location_folds": {}, "random_row_folds": {}}
+           "majority_class_accuracy": round(float(1 - y.mean()), 3), "features": FEATURES, "by_location_folds": {}}
     oof = {}
     for name, make in model_factories().items():
         out["by_location_folds"][name], oof[name] = cross_validate(make, x, y, by_place)
-        out["random_row_folds"][name], _ = cross_validate(make, x, y, by_row)
     return out, oof, y
 
 
 def plot_benchmark(bench: dict, oof: dict, y: np.ndarray) -> None:
     fig, axes = plt.subplots(1, 2, figsize=(10, 3.4))
     names = [n for n in oof if "baseline" not in n]
-    x, w = np.arange(len(names)), .38
-    axes[0].bar(x - w / 2, [bench["random_row_folds"][n]["f1_wet"][0] for n in names], w, label="random row folds", color=LIGHT)
-    axes[0].bar(x + w / 2, [bench["by_location_folds"][n]["f1_wet"][0] for n in names], w, label="held-out places", color=BLUE)
+    x, w = np.arange(len(names)), .6
+    axes[0].bar(x, [bench["by_location_folds"][n]["f1_wet"][0] for n in names], w, label="held-out places", color=BLUE)
     axes[0].set_xticks(x, names)
     axes[0].set(ylim=(0, .7), ylabel="F1 on the rain class", title="'Always dry' scores 90% accuracy but F1 = 0")
     axes[0].legend(fontsize=7, loc="upper left")
@@ -170,25 +166,6 @@ def plot_benchmark(bench: dict, oof: dict, y: np.ndarray) -> None:
     plt.close(fig)
 
 
-# ---------- the leakage trap ----------
-def leakage_demo(df: pd.DataFrame) -> dict:
-    t = df.copy()
-    t["temperature_fahrenheit"] = t.temperature_celsius * 9 / 5 + 32   # the raw file's twin column, rebuilt exactly
-    target, groups = t.temperature_celsius.values, t.location_id.values
-
-    def r2(cols: list[str]) -> float:
-        x, scores = t[cols].values, []
-        for tr, te in GroupKFold(5).split(x, target, groups=groups):
-            model = RandomForestRegressor(200, min_samples_leaf=3, random_state=SEED, n_jobs=-1).fit(x[tr], target[tr])
-            scores.append(r2_score(target[te], model.predict(x[te])))
-        return round(float(np.mean(scores)), 3)
-
-    return {"target": "temperature_celsius",
-            "r2_with_fahrenheit_and_feels_like": r2(HONEST_TEMPERATURE_FEATURES + ["temperature_fahrenheit", "feels_like_celsius"]),
-            "r2_with_fahrenheit_only": r2(HONEST_TEMPERATURE_FEATURES + ["temperature_fahrenheit"]),
-            "r2_honest_features_only": r2(HONEST_TEMPERATURE_FEATURES)}
-
-
 def main() -> None:
     FIG.mkdir(parents=True, exist_ok=True)
     plt.rcParams.update({"figure.dpi": 130, "axes.spines.top": False, "axes.spines.right": False, "font.size": 9})
@@ -201,7 +178,6 @@ def main() -> None:
     bench, oof, y = rain_benchmark(df)
     results["benchmark_wet_vs_dry"] = bench
     plot_benchmark(bench, oof, y)
-    results["leakage_demo"] = leakage_demo(df)
     (ROOT / "reports" / "results.json").write_text(json.dumps(results, indent=2, default=str))
     print(json.dumps(results, indent=2, default=str))
 
