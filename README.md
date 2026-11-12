@@ -21,8 +21,6 @@ readings instead of keeping them, test the checks themselves, and report uncerta
 | What does weather change? | Temperature barely depends on the condition (effect size 0.04); where a place is matters more (R-squared 0.04 to 0.19 with latitude). Within one place, humidity falls as temperature rises (rho -0.62) |
 | Can a model tell when it is raining? | Moderately. XGBoost reaches F1 0.52 and ROC AUC 0.91 on places it never saw, about the same as Random Forest. "Always dry" scores 90% accuracy but F1 = 0 |
 
-![Rain classifier](reports/figures/benchmark.png)
-
 ## Pipeline
 
 ```mermaid
